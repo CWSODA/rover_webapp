@@ -22,9 +22,6 @@ const OPCODES = {
 };
 let tcp_buffer = Buffer.alloc(0);
 function on_data(data) {
-    if (data.length / 14 > 5) {
-        console.log(data.length);
-    }
     tcp_buffer = Buffer.concat([tcp_buffer, data]);
 
     while (tcp_buffer.length > 0) {
@@ -33,7 +30,8 @@ function on_data(data) {
 
         // no commands, log everything as plain text
         if (start === -1) {
-            console.log(tcp_buffer.toString());
+            // console.log(tcp_buffer.toString());
+            process.stdout.write(tcp_buffer.toString());
             buffer = Buffer.alloc(0);
             break;
         }
@@ -41,7 +39,8 @@ function on_data(data) {
         // discard plaintext
         if (start !== 0) {
             let plain = tcp_buffer.subarray(0, start);
-            console.log(plain.toString());
+            // console.log(plain.toString());
+            process.stdout.write(plain.toString());
             tcp_buffer = tcp_buffer.subarray(start, tcp_buffer.length);
         }
 
@@ -99,9 +98,10 @@ function tcp_send(data) {
 
 const net = require('net');
 let is_tcp_connected = false;
+let tcp_client;
 function connect_to_tcp() {
     console.log("Attempting TCP connection...");
-    const tcp_client = net.createConnection({ host: PICO_IP, port: PICO_PORT });
+    tcp_client = net.createConnection({ host: PICO_IP, port: PICO_PORT });
 
     tcp_client.on('connect', () => {
         console.log('TCP Connected');
@@ -129,7 +129,7 @@ function connect_to_tcp() {
         setTimeout(connect_to_tcp, TCP_RETRY_DELAY_MS); // retry connection after delay
     });
 }
-//connect_to_tcp();
+// connect_to_tcp();
 
 
 /* ------------------ SERVE HTTP SERVER ----------------- */
@@ -174,8 +174,8 @@ wss.on("connection", (ws) => {
 
                 // send to pico
                 const pico_tcp_buffer = Buffer.alloc(3);
-                pico_tcp_buffer.writeUint8('$', 0);
-                pico_tcp_buffer.writeUint8('T', 1);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write('T', 1, 1);
                 pico_tcp_buffer.writeUint8(dir, 2);
                 tcp_send(pico_tcp_buffer);
                 break;
@@ -183,9 +183,9 @@ wss.on("connection", (ws) => {
             case "speed": {
                 // send to pico
                 const pico_tcp_buffer = Buffer.alloc(3);
-                pico_tcp_buffer.writeUint8('$', 0);
-                pico_tcp_buffer.writeUint8('S', 1);
-                pico_tcp_buffer.writeUint8(data.v, 2);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write('S', 1, 1);
+                pico_tcp_buffer.writeUint8(data.value, 2);
                 tcp_send(pico_tcp_buffer);
                 break;
             }
