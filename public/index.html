@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rover Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="alert">⚠ EMERGENCY HALT — ALL MANEUVERS SUSPENDED ⚠</div>
+
+<header>
+  <div class="logo">ROVER CONTROL</div>
+  <!-- <div id="clock">--:--:-- UTC</div> -->
+</header>
+
+
+<!-- PANEL: 3D ROVER DISPLAY -->
+<div class="panel open" id="p-rover">
+  <div class="panel-header" onclick="togglePanel('p-rover')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>
+      <span class="panel-name">ROVER ATTITUDE</span>
+      <span class="panel-sub">PITCH / ROLL / YAW</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <canvas id="rover-canvas" height="300"></canvas>
+    <div class="attitude-row">
+      <div class="att-card">
+        <div class="att-label">PITCH</div>
+        <div class="att-val" id="att-pitch">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-pitch-bar"></div></div>
+      </div>
+      <div class="att-card">
+        <div class="att-label">ROLL</div>
+        <div class="att-val" id="att-roll">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-roll-bar"></div></div>
+      </div>
+      <div class="att-card">
+        <div class="att-label">YAW</div>
+        <div class="att-val" id="att-yaw">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-yaw-bar"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: DRIVE CONTROL -->
+<div class="panel open" id="p-drive">
+  <div class="panel-header" onclick="togglePanel('p-drive')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--green);box-shadow:0 0 5px var(--green)"></div>
+      <span class="panel-name">DRIVE CONTROL</span>
+      <span class="panel-sub" id="drive-status">:3</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <div class="drive-layout">
+      <!-- WASD keys -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="wasd-block">
+          <div class="key empty"></div>
+          <div class="key" id="key-w" onmousedown="pressKey('w')" onmouseup="releaseKey('w')" ontouchstart="pressKey('w')" ontouchend="releaseKey('w')">W</div>
+          <div class="key empty"></div>
+          <div class="key" id="key-a" onmousedown="pressKey('a')" onmouseup="releaseKey('a')" ontouchstart="pressKey('a')" ontouchend="releaseKey('a')">A</div>
+          <div class="key" id="key-s" onmousedown="pressKey('s')" onmouseup="releaseKey('s')" ontouchstart="pressKey('s')" ontouchend="releaseKey('s')">S</div>
+          <div class="key" id="key-d" onmousedown="pressKey('d')" onmouseup="releaseKey('d')" ontouchstart="pressKey('d')" ontouchend="releaseKey('d')">D</div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px;">KEYBOARD ACTIVE</div>
+      </div>
+      <!-- Speed slider -->
+      <div class="drive-info">
+        <div class="speed-block">
+          <div class="speed-label">SPEED <span id="speed-val">50</span> %</div>
+          <input type="range" class="speed-slider" id="speed-slider" min="0" max="100" value="50" step="1"
+            oninput="updateSpeed(this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-top:2px;">
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="drive-stat">DIST TRAVELED<span id="drive-dist">0.0 m</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="scripts/script.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/gl-matrix-min.js"></script>
+<script src="scripts/webgl/init_buffer.js"></script>
+<script src="scripts/webgl/draw_scene.js"></script>
+<script src="scripts/webgl/3d_rover.js"></script>
+
+<script src="scripts/drive_ctrl.js"></script>
