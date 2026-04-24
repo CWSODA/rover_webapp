@@ -18,14 +18,10 @@ document.addEventListener('keyup', e => {
     if (['w', 'a', 's', 'd'].includes(k)) releaseKey(k);
 });
 
+let rover_max_speed = 50.0;
 function updateSpeed(v) {
-    maxSpeed = v;
-    document.getElementById('speed-val').textContent = maxSpeed;
-
-    send_ws({
-        type: "speed",
-        value: v,
-    })
+    rover_max_speed = v;
+    document.getElementById('speed-val').textContent = rover_max_speed;
 }
 
 function driveTick() {
@@ -36,6 +32,7 @@ function driveTick() {
     if (fwd || back || left || right) {
         send_ws({
             type: "drive_ctrl",
+            speed: rover_max_speed,
             fwd: keysDown.has('w'),
             back: keysDown.has('s'),
             left: keysDown.has('a'),

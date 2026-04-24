@@ -173,19 +173,11 @@ wss.on("connection", (ws) => {
                 let dir = find_drive_dir(data);
 
                 // send to pico
-                const pico_tcp_buffer = Buffer.alloc(3);
+                const pico_tcp_buffer = Buffer.alloc(4);
                 pico_tcp_buffer.write('$', 0, 1);
-                pico_tcp_buffer.write('T', 1, 1);
-                pico_tcp_buffer.writeUint8(dir, 2);
-                tcp_send(pico_tcp_buffer);
-                break;
-            }
-            case "speed": {
-                // send to pico
-                const pico_tcp_buffer = Buffer.alloc(3);
-                pico_tcp_buffer.write('$', 0, 1);
-                pico_tcp_buffer.write('S', 1, 1);
-                pico_tcp_buffer.writeUint8(data.value, 2);
+                pico_tcp_buffer.write('C', 1, 1); // c for control
+                pico_tcp_buffer.writeUint8(data.speed, 2);
+                pico_tcp_buffer.writeUint8(dir, 3);
                 tcp_send(pico_tcp_buffer);
                 break;
             }
