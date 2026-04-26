@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS-7 Mission Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#04090e;--surface:#08131b;--lift:#0c1e2b;
+  --border:rgba(0,200,255,0.14);
+  --cyan:#00c8ff;--cyan-dim:#005f78;
+  --green:#2dff7e;--amber:#ffc107;--red:#ff3c3c;
+  --text:#a8cfe0;--muted:#3d7a96;
+  --mono:'Share Tech Mono',monospace;--head:'Orbitron',sans-serif;
+}
+html{font-family:var(--mono);background:var(--bg);color:var(--text);font-size:13px;}
+body{max-width:680px;margin:0 auto;padding:16px 16px 40px;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);}
+
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;margin-bottom:12px;
+  background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--cyan);}
+.logo{font-family:var(--head);font-size:15px;color:var(--cyan);letter-spacing:3px;}
+.logo em{color:var(--green);font-style:normal;}
+#clock{font-size:12px;color:var(--cyan);letter-spacing:2px;}
+
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:10px;}
+.metric{background:var(--surface);padding:10px 12px;text-align:center;}
+.metric-val{font-family:var(--head);font-size:20px;display:block;}
+.metric-lbl{font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-top:2px;}
+.cv{color:var(--cyan)}.gv{color:var(--green)}.av{color:var(--amber)}.rv{color:var(--red)}
+
+.panel{border:1px solid var(--border);margin-bottom:8px;background:var(--surface);}
+.panel-header{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;cursor:pointer;user-select:none;
+  background:var(--lift);border-bottom:1px solid transparent;transition:border-color 0.2s;}
+.panel-header:hover{background:#0f2537;}
+.panel.open .panel-header{border-bottom:1px solid var(--border);}
+.panel-left{display:flex;align-items:center;gap:10px;}
+.panel-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.panel-name{font-size:10px;letter-spacing:2px;color:var(--cyan);}
+.panel-sub{font-size:9px;color:var(--muted);}
+.chevron{font-size:10px;color:var(--muted);transition:transform 0.25s;display:inline-block;}
+.panel.open .chevron{transform:rotate(180deg);}
+.panel-body{display:none;}
+.panel.open .panel-body{display:block;}
+
+canvas{display:block;}
+#wave{width:100%;height:80px;}
+
+.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.sys-row{background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:7px 12px;}
+.sys-name{font-size:10px;color:var(--text);}
+.s-ok{font-size:10px;color:var(--green);}
+.s-warn{font-size:10px;color:var(--amber);}
+.s-crit{font-size:10px;color:var(--red);animation:blink 1s steps(1) infinite;}
+@keyframes blink{50%{opacity:0}}
+
+.telem{margin-bottom:9px;}.telem:last-child{margin-bottom:0;}
+.telem-hdr{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;}
+.telem-lbl{color:var(--muted);}.telem-val{color:var(--text);}
+.telem-track{height:5px;background:var(--lift);border-radius:2px;overflow:hidden;}
+.telem-fill{height:100%;border-radius:2px;transition:width 0.9s ease;}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-name{font-size:10px;color:var(--text);}
+.sw{width:36px;height:18px;background:var(--lift);border-radius:9px;position:relative;cursor:pointer;border:1px solid var(--border);transition:background 0.2s;flex-shrink:0;}
+.sw.on{background:rgba(0,200,255,0.18);border-color:var(--cyan);}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:all 0.2s;}
+.sw.on::after{left:20px;background:var(--cyan);box-shadow:0 0 5px var(--cyan);}
+
+.ctrl-select{width:100%;background:var(--lift);border:1px solid var(--border);
+  color:var(--cyan);font-family:var(--mono);font-size:10px;
+  padding:7px 10px;margin-bottom:8px;cursor:pointer;border-radius:2px;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300c8ff'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;}
+.ctrl-select option{background:var(--surface);color:var(--text);}
+
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn{padding:10px 8px;cursor:pointer;font-family:var(--mono);font-size:10px;
+  letter-spacing:1.5px;border-radius:2px;background:transparent;
+  border:1px solid;transition:all 0.2s;text-align:center;}
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:scale(0.97);}
+.btn-c{color:var(--cyan);border-color:var(--cyan-dim);}
+.btn-c:hover{background:rgba(0,200,255,0.1);border-color:var(--cyan);}
+.btn-g{color:var(--green);border-color:#0d5c2a;}
+.btn-g:hover{background:rgba(45,255,126,0.1);border-color:var(--green);}
+.btn-a{color:var(--amber);border-color:#6a4500;}
+.btn-a:hover{background:rgba(255,193,7,0.1);border-color:var(--amber);}
+.btn-r{color:var(--red);border-color:#6a0a0a;}
+.btn-r:hover{background:rgba(255,60,60,0.1);border-color:var(--red);}
+
+#log{max-height:180px;overflow-y:auto;}
+.log-line{padding:3px 0;border-bottom:1px solid rgba(0,200,255,0.05);font-size:10px;line-height:1.5;}
+.log-ts{color:var(--cyan-dim);}.log-sys{color:var(--amber);margin:0 6px;}.log-msg{color:var(--muted);}
+.ll-ok .log-msg{color:var(--green);}.ll-warn .log-msg{color:var(--amber);}.ll-crit .log-msg{color:var(--red);}
+#log::-webkit-scrollbar{width:3px;}#log::-webkit-scrollbar-thumb{background:var(--cyan-dim);}
+
+#alert{display:none;background:rgba(255,60,60,0.1);border:1px solid var(--red);
+  color:var(--red);font-size:10px;letter-spacing:2px;text-align:center;
+  padding:8px;margin-bottom:8px;animation:flash-b 0.6s steps(1) infinite;}
+@keyframes flash-b{50%{border-color:transparent}}
+
+footer{position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;gap:20px;padding:5px 20px;font-size:9px;color:var(--muted);
+  justify-content:center;letter-spacing:1px;z-index:100;}
+footer span{color:var(--cyan);}
+
+.p-pad{padding:14px;}.p-pad-sm{padding:10px 14px;}
+
+/* ── WASD CONTROL ── */
+.drive-layout{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;}
+.wasd-block{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px;}
+.key{display:flex;align-items:center;justify-content:center;
+  width:44px;height:44px;border:1px solid var(--border);background:var(--lift);
+  font-family:var(--head);font-size:12px;color:var(--muted);
+  border-radius:4px;cursor:pointer;user-select:none;
+  transition:all 0.1s;letter-spacing:0;}
+.key:hover{border-color:var(--cyan-dim);color:var(--text);}
+.key.active,.key.pressed{background:rgba(0,200,255,0.18);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,200,255,0.25);}
+.key.empty{background:transparent;border-color:transparent;cursor:default;}
+.drive-info{display:flex;flex-direction:column;gap:10px;padding-top:4px;}
+.drive-stat{font-size:9px;color:var(--muted);letter-spacing:1px;}
+.drive-stat span{color:var(--cyan);font-size:12px;display:block;margin-top:2px;}
+.speed-block{display:flex;flex-direction:column;gap:6px;}
+.speed-label{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);letter-spacing:1px;}
+.speed-label span{color:var(--cyan);}
+input[type=range].speed-slider{width:100%;accent-color:var(--cyan);cursor:pointer;height:4px;}
+.dir-indicator{width:60px;height:60px;border:1px solid var(--border);border-radius:50%;
+  background:var(--lift);position:relative;flex-shrink:0;margin:0 auto;}
+.dir-arrow{position:absolute;top:50%;left:50%;width:2px;height:22px;
+  background:var(--cyan);transform-origin:bottom center;
+  transform:translate(-50%,-100%) rotate(0deg);
+  transition:transform 0.15s ease;border-radius:1px;}
+.dir-dot{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;
+  background:var(--cyan);transform:translate(-50%,-50%);}
+
+/* ── LIDAR ── */
+#lidar-canvas{width:100%;max-height:320px;}
+
+/* ── 3D ROVER ── */
+#rover-canvas{width:100%;height:300px;}
+.attitude-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.att-card{background:var(--lift);border:1px solid var(--border);padding:8px 10px;text-align:center;border-radius:2px;}
+.att-label{font-size:9px;color:var(--muted);letter-spacing:1.5px;margin-bottom:4px;}
+.att-val{font-family:var(--head);font-size:16px;color:var(--cyan);}
+.att-bar-wrap{height:3px;background:var(--bg);border-radius:2px;margin-top:5px;overflow:hidden;}
+.att-bar{height:100%;background:var(--cyan);border-radius:2px;transition:width 0.3s ease;width:50%;}
+</style>
+</head>
+<body>
+
+<div id="alert">⚠ EMERGENCY HALT — ALL MANEUVERS SUSPENDED ⚠</div>
+
+<header>
+  <div class="logo">NEXUS<em>-7</em> CONTROL</div>
+  <div id="clock">--:--:-- UTC</div>
+</header>
+
+<div class="metric-row">
+  <div class="metric"><span class="metric-val cv" id="m-vel">7.66</span><div class="metric-lbl">km/s VEL</div></div>
+  <div class="metric"><span class="metric-val gv" id="m-alt">347.2</span><div class="metric-lbl">km ALT</div></div>
+  <div class="metric"><span class="metric-val av" id="m-sig">94</span><div class="metric-lbl">dB SIGNAL</div></div>
+  <div class="metric"><span class="metric-val rv" id="m-tmp">-12.4</span><div class="metric-lbl">°C CORE</div></div>
+</div>
+
+<!-- PANEL: RADAR -->
+<div class="panel open" id="p-radar">
+  <div class="panel-header" onclick="togglePanel('p-radar')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--green);box-shadow:0 0 5px var(--green)"></div>
+      <span class="panel-name">PROXIMITY RADAR</span>
+      <span class="panel-sub">4 CONTACTS</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad" style="display:flex;justify-content:center;">
+    <canvas id="radar" width="300" height="200" style="margin:0 auto;"></canvas>
+  </div>
+</div>
+
+<!-- PANEL: COMM SIGNAL -->
+<div class="panel open" id="p-wave">
+  <div class="panel-header" onclick="togglePanel('p-wave')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan);animation:blink 2s steps(1) infinite"></div>
+      <span class="panel-name">COMM SIGNAL</span>
+      <span class="panel-sub">2.4 GHz · ACTIVE</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad-sm">
+    <canvas id="wave" height="80"></canvas>
+  </div>
+</div>
+
+<!-- PANEL: SUBSYSTEMS -->
+<div class="panel" id="p-sys">
+  <div class="panel-header" onclick="togglePanel('p-sys')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>
+      <span class="panel-name">SUBSYSTEMS</span>
+      <span class="panel-sub">1 CRITICAL · 1 WARN</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="sys-grid">
+      <div class="sys-row"><span class="sys-name">PROPULSION</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">ATTITUDE CTRL</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">POWER GRID</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">COMMS PRIMARY</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">THERMAL CTRL</span><span class="s-warn">WARN</span></div>
+      <div class="sys-row"><span class="sys-name">STAR TRACKER</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">DATA STORAGE</span><span class="s-ok">OK</span></div>
+      <div class="sys-row"><span class="sys-name">TTC MODULE</span><span class="s-crit">CRIT</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: TELEMETRY -->
+<div class="panel" id="p-telem">
+  <div class="panel-header" onclick="togglePanel('p-telem')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--cyan)"></div>
+      <span class="panel-name">TELEMETRY</span>
+      <span class="panel-sub">LIVE FEED</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <div class="telem"><div class="telem-hdr"><span class="telem-lbl">SOLAR ARRAY A</span><span class="telem-val" id="tv1">82%</span></div><div class="telem-track"><div class="telem-fill" id="tb1" style="width:82%;background:var(--cyan)"></div></div></div>
+    <div class="telem"><div class="telem-hdr"><span class="telem-lbl">SOLAR ARRAY B</span><span class="telem-val" id="tv2">76%</span></div><div class="telem-track"><div class="telem-fill" id="tb2" style="width:76%;background:var(--cyan)"></div></div></div>
+    <div class="telem"><div class="telem-hdr"><span class="telem-lbl">BATTERY CHARGE</span><span class="telem-val" id="tv3">91%</span></div><div class="telem-track"><div class="telem-fill" id="tb3" style="width:91%;background:var(--green)"></div></div></div>
+    <div class="telem"><div class="telem-hdr"><span class="telem-lbl">THRUSTER FUEL</span><span class="telem-val" id="tv4">34%</span></div><div class="telem-track"><div class="telem-fill" id="tb4" style="width:34%;background:var(--amber)"></div></div></div>
+    <div class="telem"><div class="telem-hdr"><span class="telem-lbl">THERMAL LOAD</span><span class="telem-val" id="tv5">58%</span></div><div class="telem-track"><div class="telem-fill" id="tb5" style="width:58%;background:var(--amber)"></div></div></div>
+  </div>
+</div>
+
+<!-- PANEL: SYSTEM CONTROLS -->
+<div class="panel" id="p-ctrl">
+  <div class="panel-header" onclick="togglePanel('p-ctrl')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--muted)"></div>
+      <span class="panel-name">SYSTEM CONTROLS</span>
+      <span class="panel-sub">5 ACTIVE</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <select class="ctrl-select"><option>COMMS MODE: STANDARD</option><option>COMMS MODE: HIGH GAIN</option><option>COMMS MODE: LOW POWER</option><option>COMMS MODE: RELAY</option></select>
+    <select class="ctrl-select"><option>ORBIT: MAINTENANCE</option><option>ORBIT: RAISE +5km</option><option>ORBIT: LOWER -5km</option><option>ORBIT: TRANSFER</option></select>
+    <div class="toggle-row"><span class="toggle-name">ATTITUDE CONTROL</span><div class="sw on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-name">SCIENCE PAYLOAD</span><div class="sw on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-name">BACKUP COMMS</span><div class="sw" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-name">DEBRIS SHIELD</span><div class="sw on" onclick="this.classList.toggle('on')"></div></div>
+    <div class="toggle-row"><span class="toggle-name">AUTO MANEUVER</span><div class="sw" onclick="this.classList.toggle('on')"></div></div>
+  </div>
+</div>
+
+<!-- PANEL: DRIVE CONTROL -->
+<div class="panel open" id="p-drive">
+  <div class="panel-header" onclick="togglePanel('p-drive')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--green);box-shadow:0 0 5px var(--green)"></div>
+      <span class="panel-name">DRIVE CONTROL</span>
+      <span class="panel-sub" id="drive-status">IDLE · 0.0 m/s</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <div class="drive-layout">
+      <!-- WASD keys -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="wasd-block">
+          <div class="key empty"></div>
+          <div class="key" id="key-w" onmousedown="pressKey('w')" onmouseup="releaseKey('w')" ontouchstart="pressKey('w')" ontouchend="releaseKey('w')">W</div>
+          <div class="key empty"></div>
+          <div class="key" id="key-a" onmousedown="pressKey('a')" onmouseup="releaseKey('a')" ontouchstart="pressKey('a')" ontouchend="releaseKey('a')">A</div>
+          <div class="key" id="key-s" onmousedown="pressKey('s')" onmouseup="releaseKey('s')" ontouchstart="pressKey('s')" ontouchend="releaseKey('s')">S</div>
+          <div class="key" id="key-d" onmousedown="pressKey('d')" onmouseup="releaseKey('d')" ontouchstart="pressKey('d')" ontouchend="releaseKey('d')">D</div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px;">KEYBOARD ACTIVE</div>
+      </div>
+      <!-- Direction indicator + info -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <div class="dir-indicator">
+          <div class="dir-arrow" id="dir-arrow"></div>
+          <div class="dir-dot"></div>
+        </div>
+        <div class="drive-stat">HEADING<span id="drive-heading">000°</span></div>
+      </div>
+      <!-- Speed slider -->
+      <div class="drive-info">
+        <div class="speed-block">
+          <div class="speed-label">MAX SPEED <span id="speed-val">1.0</span> m/s</div>
+          <input type="range" class="speed-slider" id="speed-slider" min="0" max="30" value="10" step="1"
+            oninput="updateSpeed(this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-top:2px;">
+            <span>0.0</span><span>1.5</span><span>3.0</span>
+          </div>
+        </div>
+        <div class="drive-stat">ACTUAL SPEED<span id="drive-speed">0.00 m/s</span></div>
+        <div class="drive-stat">DIRECTION<span id="drive-dir">STOPPED</span></div>
+        <div class="drive-stat">DIST TRAVELED<span id="drive-dist">0.0 m</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: 2D LIDAR -->
+<div class="panel open" id="p-lidar">
+  <div class="panel-header" onclick="togglePanel('p-lidar')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>
+      <span class="panel-name">2D LIDAR SCAN</span>
+      <span class="panel-sub" id="lidar-status">360° · 12Hz</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad-sm">
+    <canvas id="lidar-canvas" height="300"></canvas>
+  </div>
+</div>
+
+<!-- PANEL: 3D ROVER ATTITUDE -->
+<div class="panel open" id="p-rover">
+  <div class="panel-header" onclick="togglePanel('p-rover')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>
+      <span class="panel-name">ROVER ATTITUDE</span>
+      <span class="panel-sub">PITCH / ROLL / YAW</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <canvas id="rover-canvas" height="300"></canvas>
+    <div class="attitude-row">
+      <div class="att-card">
+        <div class="att-label">PITCH</div>
+        <div class="att-val" id="att-pitch">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-pitch-bar"></div></div>
+      </div>
+      <div class="att-card">
+        <div class="att-label">ROLL</div>
+        <div class="att-val" id="att-roll">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-roll-bar"></div></div>
+      </div>
+      <div class="att-card">
+        <div class="att-label">YAW</div>
+        <div class="att-val" id="att-yaw">0.0°</div>
+        <div class="att-bar-wrap"><div class="att-bar" id="att-yaw-bar"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: COMMANDS -->
+<div class="panel open" id="p-cmd">
+  <div class="panel-header" onclick="togglePanel('p-cmd')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--muted)"></div>
+      <span class="panel-name">COMMANDS</span>
+      <span class="panel-sub">UPLINK READY</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <div class="btn-grid">
+      <button class="btn btn-c" onclick="cmd('TELEMETRY DUMP')">▶ TELEM DUMP</button>
+      <button class="btn btn-g" onclick="cmd('SYNC UPLINK')">↑ SYNC UPLINK</button>
+      <button class="btn btn-a" onclick="cmd('ATTITUDE RESET')">⟳ ATT RESET</button>
+      <button class="btn btn-r" onclick="emergencyHalt()">⚠ EMRG HALT</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: EVENT LOG -->
+<div class="panel open" id="p-log">
+  <div class="panel-header" onclick="togglePanel('p-log')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--muted)"></div>
+      <span class="panel-name">EVENT LOG</span>
+      <span class="panel-sub" id="log-count">0 EVENTS</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad-sm">
+    <div id="log"></div>
+  </div>
+</div>
+
+<footer>
+  <div>STATION: <span>MADRID-DSN</span></div>
+  <div>AOS: <span id="aos">T+00:00:00</span></div>
+  <div>LATENCY: <span id="lat">84ms</span></div>
+  <div>PKTS: <span id="pkts">0</span>/s</div>
+</footer>
+
+<script>
+// ── CLOCK ──
+function updateClock(){const n=new Date(),p=x=>String(x).padStart(2,'0');document.getElementById('clock').textContent=`${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())} UTC`;}
+setInterval(updateClock,1000);updateClock();
+let aosS=8078;
+setInterval(()=>{aosS++;const p=x=>String(x).padStart(2,'0');const h=Math.floor(aosS/3600),m=Math.floor((aosS%3600)/60),s=aosS%60;document.getElementById('aos').textContent=`T+${p(h)}:${p(m)}:${p(s)}`;},1000);
+
+function togglePanel(id){document.getElementById(id).classList.toggle('open');}
+
+// ── RADAR ──
+(function(){
+  const c=document.getElementById('radar'),ctx=c.getContext('2d');
+  const targets=[{a:0.8,r:0.6},{a:2.1,r:0.35},{a:3.9,r:0.75},{a:5.0,r:0.5}];
+  let angle=0;
+  function draw(){
+    const w=c.width,h=c.height,cx=w/2,cy=h/2,R=Math.min(w,h)/2-10;
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(0,200,255,0.12)';ctx.lineWidth=1;
+    [.25,.5,.75,1].forEach(f=>{ctx.beginPath();ctx.arc(cx,cy,R*f,0,Math.PI*2);ctx.stroke();});
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();}
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+    const g=ctx.createLinearGradient(0,0,R,0);g.addColorStop(0,'rgba(0,200,255,0)');g.addColorStop(1,'rgba(0,200,255,0.2)');
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,0,-Math.PI*.3,true);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(R,0);ctx.strokeStyle='rgba(0,200,255,0.8)';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+    targets.forEach(t=>{
+      const diff=((t.a-angle)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);const alpha=diff<.3?.9:Math.max(0,1-diff/2.5);if(alpha<.05)return;
+      const tx=cx+Math.cos(t.a)*R*t.r,ty=cy+Math.sin(t.a)*R*t.r;
+      ctx.beginPath();ctx.arc(tx,ty,3,0,Math.PI*2);ctx.fillStyle=`rgba(45,255,126,${alpha})`;ctx.fill();
+      if(alpha>.5){ctx.beginPath();ctx.arc(tx,ty,7,0,Math.PI*2);ctx.strokeStyle=`rgba(45,255,126,${alpha*.4})`;ctx.lineWidth=1;ctx.stroke();}
+    });
+    ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#00c8ff';ctx.fill();
+    angle+=0.025;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── WAVEFORM ──
+(function(){
+  const c=document.getElementById('wave');
+  function resize(){c.width=c.clientWidth||600;c.height=80;}
+  resize();window.addEventListener('resize',resize);
+  const ctx=c.getContext('2d');let phase=0,seed=0;
+  function rnd(){seed=(seed*1664525+1013904223)|0;return(seed/0x80000000)-1;}
+  function draw(){
+    resize();const w=c.width,h=c.height,mid=h/2;
+    ctx.fillStyle='rgba(8,19,27,0.3)';ctx.fillRect(0,0,w,h);
+    const pts=[];
+    for(let x=0;x<w;x++){const t=x/w;pts.push([x,mid+Math.sin(t*12+phase)*14+Math.sin(t*31+phase*1.3)*6+Math.sin(t*53+phase*.7)*3+rnd()*1.5]);}
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.strokeStyle='rgba(0,200,255,0.85)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.strokeStyle='rgba(0,200,255,0.1)';ctx.lineWidth=5;ctx.stroke();
+    phase+=0.07;requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── LIVE METRICS ──
+setInterval(()=>{
+  document.getElementById('m-vel').textContent=(7.66+(Math.random()-.5)*.06).toFixed(2);
+  document.getElementById('m-alt').textContent=(347.2+(Math.random()-.5)*.4).toFixed(1);
+  document.getElementById('m-sig').textContent=Math.round(94+(Math.random()-.5)*5);
+  document.getElementById('m-tmp').textContent=(-12.4+(Math.random()-.5)*1.4).toFixed(1);
+  document.getElementById('pkts').textContent=Math.round(120+(Math.random()-.5)*40);
+  document.getElementById('lat').textContent=Math.round(84+(Math.random()-.5)*18)+'ms';
+  [{i:1,v:82,c:'var(--cyan)'},{i:2,v:76,c:'var(--cyan)'},{i:3,v:91,c:'var(--green)'},{i:4,v:34,c:'var(--amber)'},{i:5,v:58,c:'var(--amber)'}].forEach(b=>{
+    const nv=Math.max(5,Math.min(99,b.v+Math.round((Math.random()-.5)*6)));
+    document.getElementById('tv'+b.i).textContent=nv+'%';document.getElementById('tb'+b.i).style.width=nv+'%';
+  });
+},1800);
+
+// ── EVENT LOG ──
+const msgs=[
+  {c:'ll-ok',s:'PWR',m:'Solar array A nominal — 847W output'},
+  {c:'',s:'NAV',m:'Position fix confirmed — GPS lock'},
+  {c:'ll-warn',s:'THR',m:'Thruster B temp elevated: 312°C'},
+  {c:'ll-ok',s:'COM',m:'Uplink sync complete — 4.2 kbps'},
+  {c:'',s:'OBC',m:'Telemetry batch queued — 12 frames'},
+  {c:'ll-ok',s:'ATT',m:'Attitude stabilised — 0.02° error'},
+  {c:'ll-warn',s:'TTC',m:'Minor packet loss detected: 0.4%'},
+  {c:'',s:'DAT',m:'Science payload collecting — UV band'},
+  {c:'ll-crit',s:'TTC',m:'Anomaly on Theta-4 — investigating'},
+  {c:'ll-ok',s:'PWR',m:'Battery charge: 91% — nominal'},
+];
+let lc=0;
+function addLog(sys,msg,cls){
+  const t=new Date(),p=x=>String(x).padStart(2,'0');
+  const ts=`${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+  const d=document.createElement('div');d.className='log-line '+(cls||'');
+  d.innerHTML=`<span class="log-ts">${ts}</span><span class="log-sys">${sys}</span><span class="log-msg">${msg}</span>`;
+  const el=document.getElementById('log');el.insertBefore(d,el.firstChild);
+  lc++;document.getElementById('log-count').textContent=lc+' EVENTS';
+}
+setInterval(()=>{const m=msgs[lc%msgs.length];addLog(m.s,m.m,m.c);},2400);
+msgs.slice(0,3).forEach(m=>addLog(m.s,m.m,m.c));
+
+function cmd(name){addLog('CMD','Sent: '+name,'ll-ok');if(!document.getElementById('p-log').classList.contains('open'))togglePanel('p-log');}
+let alertOn=false;
+function emergencyHalt(){
+  if(alertOn)return;alertOn=true;
+  document.getElementById('alert').style.display='block';
+  addLog('SYS','EMERGENCY HALT — all maneuvers suspended','ll-crit');
+  if(!document.getElementById('p-log').classList.contains('open'))togglePanel('p-log');
+  setTimeout(()=>{document.getElementById('alert').style.display='none';alertOn=false;},6000);
+}
+
+// ── DRIVE CONTROL ──
+const keysDown=new Set();
+let driveHeading=0,driveSpeed=0,maxSpeed=1.0,distTraveled=0;
+let lastDriveTime=Date.now();
+
+function pressKey(k){
+  keysDown.add(k);document.getElementById('key-'+k).classList.add('pressed');
+}
+function releaseKey(k){
+  keysDown.delete(k);document.getElementById('key-'+k).classList.remove('pressed');
+}
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(['w','a','s','d'].includes(k)){e.preventDefault();pressKey(k);}
+});
+document.addEventListener('keyup',e=>{
+  const k=e.key.toLowerCase();
+  if(['w','a','s','d'].includes(k))releaseKey(k);
+});
+
+function updateSpeed(v){
+  maxSpeed=(v/10).toFixed(1);
+  document.getElementById('speed-val').textContent=maxSpeed;
+}
+
+function driveTick(){
+  const now=Date.now();const dt=(now-lastDriveTime)/1000;lastDriveTime=now;
+  const fwd=keysDown.has('w'),back=keysDown.has('s'),left=keysDown.has('a'),right=keysDown.has('d');
+  if(left)driveHeading=(driveHeading-90*dt+360)%360;
+  if(right)driveHeading=(driveHeading+90*dt)%360;
+  let targetSpeed=0;
+  if(fwd)targetSpeed=maxSpeed;
+  else if(back)targetSpeed=-maxSpeed*0.6;
+  driveSpeed+=(targetSpeed-driveSpeed)*0.15;
+  if(Math.abs(driveSpeed)<0.005)driveSpeed=0;
+  if(fwd||back)distTraveled+=Math.abs(driveSpeed)*dt;
+
+  // update UI
+  const arrow=document.getElementById('dir-arrow');
+  arrow.style.transform=`translate(-50%,-100%) rotate(${driveHeading}deg)`;
+  document.getElementById('drive-heading').textContent=Math.round(driveHeading).toString().padStart(3,'0')+'°';
+  document.getElementById('drive-speed').textContent=Math.abs(driveSpeed).toFixed(2)+' m/s';
+  document.getElementById('drive-dist').textContent=distTraveled.toFixed(1)+' m';
+  let dirTxt='STOPPED';
+  if(driveSpeed>0.01)dirTxt='FORWARD';
+  else if(driveSpeed<-0.01)dirTxt='REVERSE';
+  if(left&&(fwd||back))dirTxt+=' LEFT';
+  if(right&&(fwd||back))dirTxt+=' RIGHT';
+  document.getElementById('drive-dir').textContent=dirTxt;
+  document.getElementById('drive-status').textContent=(driveSpeed===0?'IDLE':dirTxt)+' · '+Math.abs(driveSpeed).toFixed(2)+' m/s';
+  requestAnimationFrame(driveTick);
+}
+driveTick();
+
+// ── 2D LIDAR ──
+(function(){
+  const c=document.getElementById('lidar-canvas');
+  function resize(){c.width=c.clientWidth||640;c.height=300;}
+  resize();window.addEventListener('resize',resize);
+  const ctx=c.getContext('2d');
+  // Build a static "world" of wall segments as obstacles
+  const obstacles=[
+    {type:'arc',cx:0.6,cy:0,r:0.18},{type:'arc',cx:-0.5,cy:0.3,r:0.12},
+    {type:'arc',cx:0.1,cy:-0.55,r:0.1},{type:'arc',cx:-0.7,cy:-0.2,r:0.15},
+    {type:'arc',cx:0.4,cy:0.6,r:0.09},{type:'arc',cx:-0.2,cy:0.7,r:0.13},
+    {type:'arc',cx:0.75,cy:-0.4,r:0.1},{type:'arc',cx:-0.8,cy:0.55,r:0.08},
+    // bounding wall (circle at radius ~0.9)
+    {type:'wall',r:0.92},
+  ];
+
+  function castRay(ox,oy,angle){
+    const dx=Math.cos(angle),dy=Math.sin(angle);
+    let minT=1.0;
+    obstacles.forEach(ob=>{
+      if(ob.type==='arc'){
+        const ex=ox-ob.cx,ey=oy-ob.cy;
+        const a2=dx*dx+dy*dy,b2=2*(ex*dx+ey*dy),c2=ex*ex+ey*ey-ob.r*ob.r;
+        const disc=b2*b2-4*a2*c2;
+        if(disc<0)return;
+        const t=(-b2-Math.sqrt(disc))/(2*a2);
+        if(t>0.001&&t<minT)minT=t;
+      } else if(ob.type==='wall'){
+        // circle wall — ray from inside
+        const ex=ox,ey=oy;
+        const a2=1,b2=2*(ex*dx+ey*dy),c2=ex*ex+ey*ey-ob.r*ob.r;
+        const disc=b2*b2-4*a2*c2;
+        if(disc<0)return;
+        const t=(-b2+Math.sqrt(disc))/(2*a2);
+        if(t>0.001&&t<minT)minT=t;
+      }
+    });
+    return minT;
+  }
+
+  let lidarAngle=0;
+  const RAYS=360;
+  const pointCloud=new Array(RAYS).fill(1);
+
+  function draw(){
+    resize();
+    const w=c.width,h=c.height,cx=w/2,cy=h/2,R=Math.min(w,h)/2-14;
+    ctx.clearRect(0,0,w,h);
+
+    // background grid rings
+    ctx.strokeStyle='rgba(255,193,7,0.08)';ctx.lineWidth=1;
+    [.25,.5,.75,1].forEach(f=>{ctx.beginPath();ctx.arc(cx,cy,R*f,0,Math.PI*2);ctx.stroke();});
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();}
+
+    // Range labels
+    ctx.fillStyle='rgba(255,193,7,0.3)';ctx.font='8px Share Tech Mono';ctx.textAlign='center';
+    ['2m','4m','6m','8m'].forEach((l,i)=>{ctx.fillText(l,cx,(cy-(R*(i+1)/4))-2);});
+
+    // Sweep: cast new rays around current angle
+    const sweepWidth=20;
+    for(let i=0;i<sweepWidth;i++){
+      const idx=(Math.round(lidarAngle*RAYS/(Math.PI*2))+i)%RAYS;
+      const a=idx*(Math.PI*2)/RAYS;
+      pointCloud[idx]=castRay(0,0,a-Math.PI/2);
+    }
+
+    // Draw point cloud
+    ctx.beginPath();
+    for(let i=0;i<RAYS;i++){
+      const a=i*(Math.PI*2)/RAYS-Math.PI/2;
+      const d=pointCloud[i]*R;
+      const px=cx+Math.cos(a)*d,py=cy+Math.sin(a)*d;
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fillStyle='rgba(255,193,7,0.07)';ctx.fill();
+    ctx.strokeStyle='rgba(255,193,7,0.5)';ctx.lineWidth=1;ctx.stroke();
+
+    // Individual hit dots
+    for(let i=0;i<RAYS;i++){
+      const a=i*(Math.PI*2)/RAYS-Math.PI/2;
+      const d=pointCloud[i]*R;
+      const px=cx+Math.cos(a)*d,py=cy+Math.sin(a)*d;
+      ctx.beginPath();ctx.arc(px,py,1.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,193,7,0.8)';ctx.fill();
+    }
+
+    // Sweep line
+    const sa=lidarAngle-Math.PI/2;
+    const sg=ctx.createLinearGradient(cx,cy,cx+Math.cos(sa)*R,cy+Math.sin(sa)*R);
+    sg.addColorStop(0,'rgba(255,193,7,0)');sg.addColorStop(1,'rgba(255,193,7,0.7)');
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(lidarAngle);
+    const sweepG=ctx.createLinearGradient(0,0,R,0);
+    sweepG.addColorStop(0,'rgba(255,193,7,0)');sweepG.addColorStop(1,'rgba(255,193,7,0.15)');
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,0,-Math.PI*.2,true);ctx.closePath();
+    ctx.fillStyle=sweepG;ctx.fill();
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(R,0);ctx.strokeStyle='rgba(255,193,7,0.9)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.restore();
+
+    // Center rover dot
+    ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='var(--cyan)';ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.strokeStyle='rgba(0,200,255,0.3)';ctx.lineWidth=1;ctx.stroke();
+
+    lidarAngle=(lidarAngle+0.04)%(Math.PI*2);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── 3D ROVER — clean body + 4 wheels + front marker ──
+(function(){
+  const c=document.getElementById('rover-canvas');
+  function resize(){c.width=c.clientWidth||640;c.height=300;}
+  resize();window.addEventListener('resize',resize);
+  const ctx=c.getContext('2d');
+  let pitch=0,roll=0,yaw=0,driftT=0;
+
+  function rotX(p,a){const cs=Math.cos(a),sn=Math.sin(a);return[p[0],p[1]*cs-p[2]*sn,p[1]*sn+p[2]*cs];}
+  function rotY(p,a){const cs=Math.cos(a),sn=Math.sin(a);return[p[0]*cs+p[2]*sn,p[1],-p[0]*sn+p[2]*cs];}
+  function rotZ(p,a){const cs=Math.cos(a),sn=Math.sin(a);return[p[0]*cs-p[1]*sn,p[0]*sn+p[1]*cs,p[2]];}
+  function rot(p,pr,ro,ya){let v=rotX(p,pr);v=rotY(v,ya);v=rotZ(v,ro);return v;}
+
+  const CAM_Z=7,FOV=340;
+  function proj(p,sx,sy){const z=CAM_Z-p[2];const f=FOV/Math.max(z,0.5);return[sx+p[0]*f,sy-p[1]*f,p[2]];}
+  function rgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+
+  const KN=(v=>{const l=Math.hypot(...v);return v.map(x=>x/l);})([0.4,0.9,-0.5]);
+  const FN=(v=>{const l=Math.hypot(...v);return v.map(x=>x/l);})( [-0.3,0.2,0.8]);
+
+  function box(ox,oy,oz,w,h,d,col){
+    const hw=w/2,hh=h/2,hd=d/2;
+    const v=[[-hw,-hh,-hd],[hw,-hh,-hd],[hw,hh,-hd],[-hw,hh,-hd],
+             [-hw,-hh,hd],[hw,-hh,hd],[hw,hh,hd],[-hw,hh,hd]].map(p=>[p[0]+ox,p[1]+oy,p[2]+oz]);
+    return{v,faces:[[0,1,2,3],[5,4,7,6],[4,0,3,7],[1,5,6,2],[3,2,6,7],[4,5,1,0]],
+           norms:[[0,0,-1],[0,0,1],[-1,0,0],[1,0,0],[0,1,0],[0,-1,0]],rgb:rgb(col)};
+  }
+
+  // body + 4 wheels + bright front marker block (z = -0.62 = front face)
+  const PARTS=[
+    box( 0,    0,    0,    2.2, 0.55, 1.2, '#1e7aaa'), // main body
+    box(-1.18,-0.22,-0.65, 0.24,0.52,0.52, '#2a90b8'), // wheel FL
+    box( 1.18,-0.22,-0.65, 0.24,0.52,0.52, '#2a90b8'), // wheel FR
+    box(-1.18,-0.22, 0.65, 0.24,0.52,0.52, '#2a90b8'), // wheel RL
+    box( 1.18,-0.22, 0.65, 0.24,0.52,0.52, '#2a90b8'), // wheel RR
+    box( 0,    0.10,-0.72, 1.60,0.28,0.08, '#00ff88'), // FRONT marker (green bar)
+  ];
+
+  function draw(){
+    resize();
+    const W=c.width,H=c.height,sx=W/2,sy=H/2+10;
+    ctx.clearRect(0,0,W,H);
+
+    driftT+=0.007;
+    const tP=Math.sin(driftT*0.7)*18+Math.cos(driftT*0.3)*8;
+    const tR=Math.sin(driftT*0.5+1)*12+Math.cos(driftT*0.9)*6;
+    pitch+=(tP-pitch)*0.04; roll+=(tR-roll)*0.04; yaw=(yaw+0.35)%360;
+    const pr=pitch*Math.PI/180,ro=roll*Math.PI/180,ya=yaw*Math.PI/180;
+
+    const faces=[];
+    PARTS.forEach(p=>{
+      const tv=p.v.map(v=>rot(v,pr,ro,ya));
+      const pv=tv.map(v=>proj(v,sx,sy));
+      p.faces.forEach((fi,idx)=>{
+        const d2=fi.map(i=>pv[i]),d3=fi.map(i=>tv[i]);
+        const ax=d2[1][0]-d2[0][0],ay=d2[1][1]-d2[0][1];
+        const bx=d2[2][0]-d2[0][0],by=d2[2][1]-d2[0][1];
+        if(ax*by-ay*bx<0)return; // backface cull
+        const avgZ=d3.reduce((s,v)=>s+v[2],0)/d3.length;
+        const rn=rot(p.norms[idx],pr,ro,ya);
+        const key=Math.max(0,rn[0]*KN[0]+rn[1]*KN[1]+rn[2]*KN[2]);
+        const fill=Math.max(0,rn[0]*FN[0]+rn[1]*FN[1]+rn[2]*FN[2]);
+        const b=Math.min(1, 0.40+key*0.70+fill*0.22);
+        faces.push({pts:d2,avgZ,b,rgb:p.rgb});
+      });
+    });
+
+    faces.sort((a,z)=>z.avgZ-a.avgZ);
+    faces.forEach(f=>{
+      const[r,g,b]=f.rgb;
+      const br=Math.round(r*f.b),bg=Math.round(g*f.b),bb=Math.round(b*f.b);
+      ctx.beginPath();ctx.moveTo(f.pts[0][0],f.pts[0][1]);
+      for(let i=1;i<f.pts.length;i++)ctx.lineTo(f.pts[i][0],f.pts[i][1]);
+      ctx.closePath();
+      // solid black backing first to kill any canvas transparency bleed
+      ctx.fillStyle='#000';ctx.fill();
+      // solid opaque colour on top
+      ctx.fillStyle=`rgb(${br},${bg},${bb})`;ctx.fill();
+      // solid dark edge — no alpha so it never bleeds
+      ctx.strokeStyle=`rgb(${Math.max(0,br-30)},${Math.max(0,bg-30)},${Math.max(0,bb-30)})`;
+      ctx.lineWidth=1;ctx.stroke();
+    });
+
+    // XYZ axes
+    const ao=[38,42],al=26;
+    ctx.font='bold 9px Share Tech Mono';ctx.textAlign='center';
+    [['X',[1,0,0],'#ff5555'],['Y',[0,1,0],'#2dff7e'],['Z',[0,0,1],'#00c8ff']].forEach(([l,d,col])=>{
+      const rv=rot(d,pr,ro,ya);
+      const ex=ao[0]+rv[0]*al,ey=ao[1]-rv[1]*al;
+      ctx.beginPath();ctx.moveTo(ao[0],ao[1]);ctx.lineTo(ex,ey);
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle=col;ctx.fillText(l,ex+(ex-ao[0])*.28,ey+(ey-ao[1])*.28+3);
+    });
+
+    document.getElementById('att-pitch').textContent=pitch.toFixed(1)+'°';
+    document.getElementById('att-roll').textContent=roll.toFixed(1)+'°';
+    document.getElementById('att-yaw').textContent=(yaw%360).toFixed(1)+'°';
+    document.getElementById('att-pitch-bar').style.width=(50+pitch/45*50)+'%';
+    document.getElementById('att-roll-bar').style.width=(50+roll/45*50)+'%';
+    document.getElementById('att-yaw-bar').style.width=((yaw%360)/360*100)+'%';
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

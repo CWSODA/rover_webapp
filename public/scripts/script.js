@@ -4,8 +4,9 @@
 function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
 
 function set_pico_status(is_pico_connected) {
-	document.getElementById("pico_status").innerText = "PICO "
-		+ (is_pico_connected ? "Connected" : "Disconnected");
+	let element = document.getElementById("pico_status");
+	element.innerText = "PICO " + (is_pico_connected ? "Connected" : "Disconnected");
+	element.style.color = is_pico_connected ? "#12ff55" : "#d90033";
 }
 
 /* ------------------------------------------------------ */
@@ -64,6 +65,6 @@ function send_ws(msg) {
 
 function request_pico_status() {
 	send_ws({ type: "request_pico_status" });
-	setTimeout(send_pico_status_request, 500);
+	setTimeout(request_pico_status, 500);
 }
 request_pico_status();

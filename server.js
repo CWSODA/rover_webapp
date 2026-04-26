@@ -78,7 +78,7 @@ function on_data(data) {
                 break;
             }
             case 'H': {
-                console.log("Ping from pico");
+                // console.log("Ping from pico");
                 break;
             }
         }
