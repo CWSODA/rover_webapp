@@ -3,20 +3,28 @@
 /* ------------------------------------------------------ */
 function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
 
+function set_pico_status(is_pico_connected) {
+	document.getElementById("pico_status").innerText = "PICO "
+		+ (is_pico_connected ? "Connected" : "Disconnected");
+}
+
 /* ------------------------------------------------------ */
 /*                        WebSocket                       */
 /* ------------------------------------------------------ */
 const ws = new WebSocket("ws://" + location.host);
-let ws_client;
+let is_ws_connected = false;
 
 ws.onopen = () => {
 	console.log("WebSocket connected");
+	is_ws_connected = true;
 }
 
 ws.onclose = () => {
 	console.log("WebSocket disconnected");
+	is_ws_connected = false;
 }
 
+// vars
 let pitch = 0.0, yaw = 0.0, roll = 0.0;
 ws.onmessage = (event) => {
 	let data;
@@ -38,6 +46,10 @@ ws.onmessage = (event) => {
 			yaw = data.yaw;
 			break;
 		}
+		case "pico_status": {
+			set_pico_status(data.is_connected);
+			break;
+		}
 		default: {
 			console.log("Invalid type");
 		}
@@ -45,5 +57,13 @@ ws.onmessage = (event) => {
 };
 
 function send_ws(msg) {
-	ws.send(JSON.stringify(msg));
+	if (is_ws_connected === true) {
+		ws.send(JSON.stringify(msg));
+	}
 }
+
+function request_pico_status() {
+	send_ws({ type: "request_pico_status" });
+	setTimeout(send_pico_status_request, 500);
+}
+request_pico_status();

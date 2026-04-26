@@ -8,11 +8,13 @@ const os = require("os");
 // config
 const PICO_IP = '10.161.98.199';
 const PICO_PORT = 4242;
-TCP_TIMEOUT_MS = 10 * 1000;
+TCP_TIMEOUT_MS = 3 * 1000;
 const TCP_RETRY_DELAY_MS = 1000;
 const SERVER_PORT = 8080;
 
-/* ------------------- TCP CONNECTION ------------------- */
+/* ------------------------------------------------------ */
+/*                     TCP CONNECTION                     */
+/* ------------------------------------------------------ */
 // opcodes and their lengths including start bit and opcode
 const OPCODES = {
     'T': 2 + 0, // Timestamp: no data
@@ -92,6 +94,7 @@ function on_data(data) {
 
 function tcp_send(data) {
     if (is_tcp_connected === false) { return; }
+    console.log("sending: " + data);
 
     tcp_client.write(data);
 }
@@ -102,6 +105,7 @@ let tcp_client;
 function connect_to_tcp() {
     console.log("Attempting TCP connection...");
     tcp_client = net.createConnection({ host: PICO_IP, port: PICO_PORT });
+    tcp_client.setNoDelay(true);
 
     tcp_client.on('connect', () => {
         console.log('TCP Connected');
@@ -112,7 +116,6 @@ function connect_to_tcp() {
             console.log("TCP Server Timeout");
             tcp_client.destroy();
             is_tcp_connected = false;
-            // connect_to_tcp(); // retry connection after delay
         });
     });
 
@@ -125,14 +128,16 @@ function connect_to_tcp() {
     });
 
     tcp_client.on('close', () => {
-        console.log(`TCP Connection Failed. Retrying in ${TCP_RETRY_DELAY_MS / 1000}s...`);
+        console.log(`TCP Connection Failed. Retrying ...`);
         setTimeout(connect_to_tcp, TCP_RETRY_DELAY_MS); // retry connection after delay
     });
 }
-// connect_to_tcp();
+connect_to_tcp();
 
 
-/* ------------------ SERVE HTTP SERVER ----------------- */
+/* ------------------------------------------------------ */
+/*                       HTTP SERVER                      */
+/* ------------------------------------------------------ */
 const server = HTTP.createServer((req, res) => {
     let filepath = "./public" + (req.url === "/" ? "/index.html" : req.url);
 
@@ -147,7 +152,9 @@ const server = HTTP.createServer((req, res) => {
     });
 });
 
-/* ------------------ WEBSOCKET SERVER ------------------ */
+/* ------------------------------------------------------ */
+/*                     WEBSOCKET COMMS                    */
+/* ------------------------------------------------------ */
 const wss = new WebSocket.Server({ server });
 let ws_client = null; // only one client expected, avoids input conflicts
 wss.on("connection", (ws) => {
@@ -175,10 +182,21 @@ wss.on("connection", (ws) => {
                 // send to pico
                 const pico_tcp_buffer = Buffer.alloc(4);
                 pico_tcp_buffer.write('$', 0, 1);
-                pico_tcp_buffer.write('C', 1, 1); // c for control
+                pico_tcp_buffer.write('C', 1, 1); // C for control
                 pico_tcp_buffer.writeUint8(data.speed, 2);
                 pico_tcp_buffer.writeUint8(dir, 3);
                 tcp_send(pico_tcp_buffer);
+                break;
+            }
+            case "algo_toggle": { // turns on algorithm
+                const pico_tcp_buffer = Buffer.alloc(2);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write('A', 1, 1); // A for algo
+                tcp_send(pico_tcp_buffer);
+                break;
+            }
+            case "request_pico_status": { // request pico status
+                send_pico_status(is_tcp_connected);
                 break;
             }
             default: {
@@ -201,11 +219,12 @@ function send_ws(msg) {
     }
 }
 
+
 function find_drive_dir(data) {
     let dir;
     if (data.fwd && !data.back && !data.left && !data.right) {
         // 0 for N 0°
-        dir = 0;
+        dir = 1;
     }
     if (data.fwd && !data.back && !data.left && data.right) {
         // 1 for NE 45°
@@ -238,7 +257,13 @@ function find_drive_dir(data) {
     return dir;
 }
 
-/* -------------------- START SERVER -------------------- */
+function send_pico_status(is_pico_connected) {
+    send_ws({ type: "pico_status", is_connected: is_pico_connected });
+}
+
+/* ------------------------------------------------------ */
+/*                      START SERVER                      */
+/* ------------------------------------------------------ */
 const interfaces = os.networkInterfaces();
 let pc_addr = '0.0.0.0';;
 for (const name in interfaces) {
@@ -256,17 +281,3 @@ server.listen(SERVER_PORT, '0.0.0.0', () => {
     console.log(`  Network: http://${pc_addr}:${SERVER_PORT}`);
 });
 
-let pitch = 0, roll = 0, yaw = 0;
-function test() {
-    setTimeout(() => {
-        send_ws({
-            type: "rotation",
-            pitch: pitch,
-            roll: roll,
-            yaw: yaw,
-        });
-        pitch += 1;
-        test();
-    }, 10);
-}
-// test();
