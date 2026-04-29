@@ -24,6 +24,7 @@ const OPCODES = {
 };
 let tcp_buffer = Buffer.alloc(0);
 function on_data(data) {
+    // console.log(data);
     tcp_buffer = Buffer.concat([tcp_buffer, data]);
 
     while (tcp_buffer.length > 0) {
@@ -60,8 +61,10 @@ function on_data(data) {
             case 'T': { break; } // do nothing
             case 'L': {
                 const sig_str = tcp_buffer.readUInt8(PAYLOAD_START);
-                const dist = tcp_buffer.readFloatLE(PAYLOAD_START + 1);
-                const angle = tcp_buffer.readFloatLE(PAYLOAD_START + 1 + 4);
+                const read_dist = tcp_buffer.readFloatLE(PAYLOAD_START + 1);
+                const read_angle = tcp_buffer.readFloatLE(PAYLOAD_START + 1 + 4);
+                // console.log(`Lidar: (${sig_str}) (${read_dist}) (${read_angle})`);
+                send_ws({ type: "lidar", dist: read_dist, angle: deg2rad(read_angle) });
                 break;
             }
             case 'R': {
@@ -219,7 +222,7 @@ function send_ws(msg) {
     }
 }
 
-
+// helper functions
 function find_drive_dir(data) {
     let dir;
     if (data.fwd && !data.back && !data.left && !data.right) {
@@ -256,6 +259,7 @@ function find_drive_dir(data) {
     }
     return dir;
 }
+function deg2rad(val) { return val * 3.1415 / 180; }
 
 function send_pico_status(is_pico_connected) {
     send_ws({ type: "pico_status", is_connected: is_pico_connected });

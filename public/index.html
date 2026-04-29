@@ -16,6 +16,20 @@
   <div id="pico_status">PICO Disconnected</div>
 </header>
 
+<!-- PANEL: 2D LIDAR -->
+<div class="panel open" id="p-lidar">
+  <div class="panel-header" onclick="togglePanel('p-lidar')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>
+      <span class="panel-name">2D LIDAR SCAN</span>
+      <span class="panel-sub" id="lidar-status">360° · 4Hz</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad-sm">
+    <canvas id="lidar-canvas" height="300"></canvas>
+  </div>
+</div>
 
 <!-- PANEL: 3D ROVER DISPLAY -->
 <div class="panel open" id="p-rover">
@@ -93,6 +107,8 @@
 </div>
 
 <script src="scripts/script.js"></script>
+
+<script src="scripts/lidar.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/gl-matrix-min.js"></script>
 <script src="scripts/webgl/init_buffer.js"></script>

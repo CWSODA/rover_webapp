@@ -27,6 +27,8 @@ ws.onclose = () => {
 
 // vars
 let pitch = 0.0, yaw = 0.0, roll = 0.0;
+const lidar_data = new Array();
+const MAX_LIDAR_QUEUE_LEN = 2000 / 4; // 2000 samples/s over 4Hz
 ws.onmessage = (event) => {
 	let data;
 	try {
@@ -41,6 +43,13 @@ ws.onmessage = (event) => {
 		return;
 	}
 	switch (data.type) {
+		case "lidar": {
+			lidar_data.push({ dist: data.dist, angle: data.angle });
+			if (lidar_data.length > MAX_LIDAR_QUEUE_LEN) {
+				lidar_data.shift();
+			}
+			// console.log("lidar size: " + lidar_data.length);
+		}
 		case "rotation": {
 			pitch = data.pitch;
 			roll = data.roll;
