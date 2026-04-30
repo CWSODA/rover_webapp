@@ -6,7 +6,7 @@ const WebSocket = require("ws");
 const os = require("os");
 
 // config
-const PICO_IP = '10.161.98.199';
+const PICO_IP = '10.161.98.4';
 const PICO_PORT = 4242;
 TCP_TIMEOUT_MS = 3 * 1000;
 const TCP_RETRY_DELAY_MS = 1000;
@@ -181,6 +181,7 @@ wss.on("connection", (ws) => {
         switch (data.type) {
             case "drive_ctrl": { // has bool for: fwd, back, left, right
                 let dir = find_drive_dir(data);
+                if (dir === 0) break; // invalid key combo
 
                 // send to pico
                 const pico_tcp_buffer = Buffer.alloc(4);
@@ -189,18 +190,34 @@ wss.on("connection", (ws) => {
                 pico_tcp_buffer.writeUint8(data.speed, 2);
                 pico_tcp_buffer.writeUint8(dir, 3);
                 tcp_send(pico_tcp_buffer);
+
+                // turn off algo on webapp
+                send_ws({ type: "algo", is_algo_on: false });
                 break;
             }
-            case "algo_toggle": { // turns on algorithm
+            case "algo": { // sets algorithm status
                 const pico_tcp_buffer = Buffer.alloc(2);
                 pico_tcp_buffer.write('$', 0, 1);
-                pico_tcp_buffer.write('A', 1, 1); // A for algo
+                // A for algo, lower case for off, upper for on
+                pico_tcp_buffer.write(data.is_algo_on ? 'A' : 'a', 1, 1);
                 tcp_send(pico_tcp_buffer);
                 break;
             }
             case "request_pico_status": { // request pico status
                 send_pico_status(is_tcp_connected);
                 break;
+            }
+            case "reset_gyro": {
+                const pico_tcp_buffer = Buffer.alloc(2);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write('G', 1, 1); // G for gyro reset
+                tcp_send(pico_tcp_buffer); break;
+            }
+            case "emergency_halt": {
+                const pico_tcp_buffer = Buffer.alloc(2);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write('E', 1, 1); // E for emergency
+                tcp_send(pico_tcp_buffer); break;
             }
             default: {
                 console.log("Invalid type");
@@ -222,9 +239,16 @@ function send_ws(msg) {
     }
 }
 
-// helper functions
+/* ------------------ helper functions ------------------ */
+// gets dir corresponding to WASD keys
+// 0 means no movement
 function find_drive_dir(data) {
-    let dir;
+    let dir = 0;
+    // cancel opposite directions
+    if (data.fwd && data.back) { data.fwd = 0; data.back = 0; }
+    if (data.left && data.right) { data.left = 0; data.right = 0; }
+
+    // get dir
     if (data.fwd && !data.back && !data.left && !data.right) {
         // 0 for N 0°
         dir = 1;

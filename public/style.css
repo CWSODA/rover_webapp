@@ -89,6 +89,16 @@ canvas{display:block;}
 .btn-r{color:var(--red);border-color:#6a0a0a;}
 .btn-r:hover{background:rgba(255,60,60,0.1);border-color:var(--red);}
 
+/* toggle algorithm (on/off) = (to/tf) */
+.btn-to{color:var(--green);border-color:#0d5c2a;}
+.btn-to:hover{background:rgba(45,255,126,0.1);border-color:var(--green);}
+.btn-tf{color:var(--red);border-color:#6a0a0a;}
+.btn-tf:hover{background:rgba(255,60,60,0.1);border-color:var(--red);}
+
+/* emergency button */
+.btn-e{color:var(--red);border-color:#f71a1a;}
+.btn-e:hover{background:rgba(255,60,60,0.1);border-color:var(--red);}
+
 #log{max-height:180px;overflow-y:auto;}
 .log-line{padding:3px 0;border-bottom:1px solid rgba(0,200,255,0.05);font-size:10px;line-height:1.5;}
 .log-ts{color:var(--cyan-dim);}.log-sys{color:var(--amber);margin:0 6px;}.log-msg{color:var(--muted);}

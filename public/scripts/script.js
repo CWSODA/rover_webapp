@@ -60,6 +60,10 @@ ws.onmessage = (event) => {
 			set_pico_status(data.is_connected);
 			break;
 		}
+		case "algo": {
+			update_algo(data.is_algo_on);
+			break;
+		}
 		default: {
 			console.log("Invalid type");
 		}

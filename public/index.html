@@ -16,6 +16,25 @@
   <div id="pico_status">PICO Disconnected</div>
 </header>
 
+<!-- PANEL: COMMANDS -->
+<div class="panel open" id="p-cmd">
+  <div class="panel-header" onclick="togglePanel('p-cmd')">
+    <div class="panel-left">
+      <div class="panel-dot" style="background:var(--muted)"></div>
+      <span class="panel-name">COMMANDS</span>
+      <span class="panel-sub">UPLINK READY</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body p-pad">
+    <div class="btn-grid">
+      <button class="btn btn-tf" id="algo_toggle_button" onclick="toggle_algo()">TOGGLE ALGORITHM (OFF)</button>
+      <button class="btn btn-a" onclick="reset_gyro()">⟳ ROT RESET</button>
+      <button class="btn btn-e" onclick="emergency_halt()">⚠ EMRG HALT</button>
+    </div>
+  </div>
+</div>
+
 <!-- PANEL: 2D LIDAR -->
 <div class="panel open" id="p-lidar">
   <div class="panel-header" onclick="togglePanel('p-lidar')">
@@ -116,3 +135,5 @@
 <script src="scripts/webgl/3d_rover.js"></script>
 
 <script src="scripts/drive_ctrl.js"></script>
+
+<script src="scripts/buttons.js"></script>
