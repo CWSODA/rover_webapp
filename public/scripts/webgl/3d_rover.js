@@ -93,20 +93,21 @@ function init_webgl() {
 
     // Draw the scene repeatedly
     function render() {
-        draw_scene(gl, program_info, buffers, {
-            pitch: pitch,
-            yaw: yaw,
-            roll: roll,
-        });
+        if (pitch != undefined && yaw != undefined && roll != undefined) {
+            draw_scene(gl, program_info, buffers, {
+                pitch: pitch,
+                yaw: yaw,
+                roll: roll,
+            });
 
-        // Update readouts
-        document.getElementById('att-pitch').textContent = pitch.toFixed(1) + '°';
-        document.getElementById('att-roll').textContent = roll.toFixed(1) + '°';
-        document.getElementById('att-yaw').textContent = (yaw % 360).toFixed(1) + '°';
-        document.getElementById('att-pitch-bar').style.width = (50 + pitch / 45 * 50) + '%';
-        document.getElementById('att-roll-bar').style.width = (50 + roll / 45 * 50) + '%';
-        document.getElementById('att-yaw-bar').style.width = ((yaw % 360) / 360 * 100) + '%';
-
+            // Update readouts
+            document.getElementById('att-pitch').textContent = pitch.toFixed(1) + '°';
+            document.getElementById('att-roll').textContent = roll.toFixed(1) + '°';
+            document.getElementById('att-yaw').textContent = (yaw % 360).toFixed(1) + '°';
+            document.getElementById('att-pitch-bar').style.width = (50 + pitch / 45 * 50) + '%';
+            document.getElementById('att-roll-bar').style.width = (50 + roll / 45 * 50) + '%';
+            document.getElementById('att-yaw-bar').style.width = ((yaw % 360) / 360 * 100) + '%';
+        }
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
