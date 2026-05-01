@@ -219,6 +219,12 @@ wss.on("connection", (ws) => {
                 pico_tcp_buffer.write('E', 1, 1); // E for emergency
                 tcp_send(pico_tcp_buffer); break;
             }
+            case "heading": {
+                const pico_tcp_buffer = Buffer.alloc(2);
+                pico_tcp_buffer.write('$', 0, 1);
+                pico_tcp_buffer.write(data.val ? 'H' : 'h', 1, 1); // H for heading
+                tcp_send(pico_tcp_buffer); break;
+            }
             default: {
                 console.log("Invalid type");
             }

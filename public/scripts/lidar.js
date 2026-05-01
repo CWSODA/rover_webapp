@@ -52,7 +52,7 @@ function draw(timestamp) {
         const data_point = lidar_data[i]; // each point should be angle, dist
         const radius = data_point.dist * screen_radius / lidar_zoom;
         const px = cx + Math.sin(data_point.angle) * radius;
-        const py = cy + Math.cos(data_point.angle) * radius;
+        const py = cy - Math.cos(data_point.angle) * radius;
         ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(100,255,7,1)'; ctx.fill();
 

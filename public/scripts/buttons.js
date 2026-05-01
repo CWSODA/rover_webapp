@@ -31,3 +31,8 @@ function reset_gyro() {
 function emergency_halt() {
     send_ws({ type: "emergency_halt" });
 }
+
+let is_heading = false;
+function toggle_heading() {
+    send_ws({ type: "heading", val: is_heading });
+}
