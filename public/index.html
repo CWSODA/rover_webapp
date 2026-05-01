@@ -41,12 +41,23 @@
     <div class="panel-left">
       <div class="panel-dot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>
       <span class="panel-name">2D LIDAR SCAN</span>
-      <span class="panel-sub" id="lidar-status">360° · 4Hz</span>
+      <span class="panel-sub" id="lidar-status">360° · 5Hz</span>
     </div>
     <span class="chevron">▼</span>
   </div>
   <div class="panel-body p-pad-sm">
     <canvas id="lidar-canvas" height="300"></canvas>
+    <!-- Zoom slider -->
+      <div class="drive-info">
+        <div class="speed-block">
+          <div class="speed-label">ZOOM <span id="zoom-val">4m</span> RADIUS (m)</div>
+          <input type="range" class="speed-slider" id="zoom-slider" min="1" max="8" value="4" step="0.1"
+            oninput="update_zoom(this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-top:2px;">
+            <span>1</span><span>4</span><span>8</span>
+          </div>
+        </div>
+      </div>
   </div>
 </div>
 
@@ -112,7 +123,7 @@
       <!-- Speed slider -->
       <div class="drive-info">
         <div class="speed-block">
-          <div class="speed-label">SPEED <span id="speed-val">50</span> %</div>
+          <div class="speed-label">SPEED<span id="speed-val">50%</span>%</div>
           <input type="range" class="speed-slider" id="speed-slider" min="0" max="100" value="50" step="1"
             oninput="updateSpeed(this.value)">
           <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-top:2px;">

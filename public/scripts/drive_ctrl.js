@@ -21,7 +21,7 @@ document.addEventListener('keyup', e => {
 let rover_max_speed = 50.0;
 function updateSpeed(v) {
     rover_max_speed = v;
-    document.getElementById('speed-val').textContent = rover_max_speed;
+    document.getElementById('speed-val').textContent = rover_max_speed + '%';
 }
 
 function driveTick() {
